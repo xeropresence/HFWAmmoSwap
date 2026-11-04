@@ -4,6 +4,8 @@ A [Native Loader](https://www.nexusmods.com/horizonforbiddenwest/mods/223) mod f
 
 ![Edit Ammo next to Edit Coils in the inventory](docs/screenshots/1-edit-ammo-prompt.jpg)
 
+![The weapon's ammo slots, with Restore Default Ammo and Remove Ammo](docs/screenshots/2-slot-row.jpg)
+
 ![Picking an ammo type, with its damage on this weapon](docs/screenshots/3-ammo-list.jpg)
 
 ## Features
