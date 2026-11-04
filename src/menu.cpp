@@ -843,8 +843,13 @@ namespace
     {
         if (!InAmmoMode(controller))
             return o_PopulateMods(controller);
-        WriteAmmoList(static_cast<uint8_t*>(controller));
-        WriteSlots(static_cast<uint8_t*>(controller));
+        auto* c = static_cast<uint8_t*>(controller);
+        WriteAmmoList(c);
+        WriteSlots(c);
+        // The view's opening actions may have selected the first coil socket before ammo mode was
+        // on, leaving that coil in the slot card; select the first ammo slot instead.
+        At<void*>(c, InvMenu::SelectedSocket) = g_sockets[g.selectedSlot];
+        WriteSelectedSlot(c);
     }
 
     void hk_SelectMod(void* controller, void* socket)
