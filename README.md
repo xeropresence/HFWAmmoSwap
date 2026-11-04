@@ -84,6 +84,14 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+The same tag also adds the zip as a new version of the mod's file on Nexus Mods, once the repository is set up for it:
+
+1. Upload the first zip to the Nexus Mods page by hand; the action can only add versions to an existing file.
+2. Note the mod ID and that file's ID (Files tab, "Advanced").
+3. In the GitHub repository settings, add the secret `NEXUSMODS_API_KEY` (a [Nexus Mods API key](https://www.nexusmods.com/settings/api-keys)) and the variables `NEXUS_MOD_ID` and `NEXUS_FILE_ID`.
+
+Each upload archives the previous version, sets the mod's version to the tag (without the `v`) and adds a changelog entry linking to the GitHub release. Until `NEXUS_FILE_ID` is set the step is skipped.
+
 ## How it works
 
 The mod hooks the game's `InventoryMenuController` and menu code:
