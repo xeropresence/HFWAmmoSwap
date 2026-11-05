@@ -29,7 +29,9 @@ using namespace game;
 //   the weapon's ammo slots at its upgrade level (filled ones first, then empty ones), the list is the
 //   ammo of that type the player's weapons hold or come with, equipping puts the ammo into the selected
 //   slot and unequipping empties it. Ammo already on the weapon is shown as unavailable (greyed out).
-//   Ammo descriptions get the weapon's damage with that ammo appended.
+//   Ammo descriptions get the weapon's damage with that ammo appended. The pointer entering a slot
+//   runs the view's populate action again (as the game does for coils), which stays in ammo mode; the
+//   pointer leaving the slot row doesn't close the view as it does for coils.
 // * Leaving the view (cancel), opening another tab or selecting another item ends ammo mode.
 
 namespace
@@ -103,10 +105,12 @@ namespace
     constexpr GGUUID kVisualsBinding = ParseGuid("2a2a9681-6a4e-9642-b268-a548680cc58e");     // outfit "Apply Visuals" input binding
     constexpr int32_t kFunctionInbox = 20;  // EMenuInputFunction FUNCTION_INBOX: Triangle, F on keyboard
     constexpr uint64_t kModUuidLo = 0x706177536F6D6D41ull;  // "AmmoSwap": first half of the mod's own object UUIDs
-    constexpr GGUUID kCloseEditActions[] = {
-        ParseGuid("a2ad12a1-5911-aa45-bb09-81a07e3ac5b7"),  // "CloseInspectOrEditMods" (cancel)
-        ParseGuid("5409138d-f3b2-0d49-b40a-e84766d047ac"),  // "CloseInspectOrEditMods" (cancel)
-    };
+    // "CloseEditModsIfNotEditing": closes the edit-coils view when the pointer leaves its slot row (or
+    // list) before a slot was picked, since hovering the coils also opens it.
+    constexpr GGUUID kPointerLeftEditView = ParseGuid("efb032d2-ef7c-b547-8d05-b1402d5fa566");
+    // "Highlight item": first action when the inventory's item grid gets focus, which it gets back
+    // whenever the edit-coils view closes (cancel, or kPointerLeftEditView).
+    constexpr GGUUID kItemGridFocused = ParseGuid("e27a995c-4689-4d41-bc09-9080c9b983dc");
 
     // Texts of the edit-coils view that read differently while editing ammo.
     struct TextOverride
@@ -491,7 +495,6 @@ namespace
     using TagOnEvent_t = void (*)(void* tag, void* event);
     TagOnEvent_t o_TagOnEvent;
 
-    void hk_Refresh(void* controller);
     void RefreshAmmoView(uint8_t* controller);
 
     // ---- static texts ------------------------------------------------------------------------------
@@ -563,7 +566,7 @@ namespace
         t.Bool(current, "show_visuals_option", g.ammoMode);
     }
 
-    void EndAmmoMode(bool refresh)
+    void EndAmmoMode()
     {
         if (!g.ammoMode)
             return;
@@ -574,8 +577,6 @@ namespace
             At<void*>(g.controller, InvMenu::PreviewedMod) = nullptr;
         ApplyModeTexts(g.controller);
         LOG("Edit Ammo closed");
-        if (refresh && g.controller)
-            hk_Refresh(g.controller);
     }
 
     // The mod's Restore Default Ammo binding in the edit view shows when this is set.
@@ -602,7 +603,7 @@ namespace
 
         void* item = At<void*>(controller, InvMenu::SelectedItem);
         if (g.ammoMode && (controller != g.controller || item != g.weapon))
-            EndAmmoMode(false);
+            EndAmmoMode();
 
         g.controller = controller;
         g.swappableSelected = item && At<int8_t>(controller, InvMenu::Category) == kCategoryWeapons && ammo::HasSwappableAmmo(ammo::ItemResource(item));
@@ -784,21 +785,19 @@ namespace
             return;
         }
 
-        o_GraphExecute(action, menu, sender, event);
+        // Edit Ammo is only ever opened on purpose, so its view stays open until cancelled.
+        if (id == kPointerLeftEditView && g.ammoMode)
+            return;
 
-        if (std::any_of(std::begin(kCloseEditActions), std::end(kCloseEditActions), [&](const GGUUID& c) { return c == id; }))
+        if (id == kItemGridFocused && (g.ammoMode || g.vanillaEdit))
         {
-            if (g.ammoMode)
-            {
-                EndAmmoMode(true);
-            }
-            else if (g.vanillaEdit)
-            {
-                g.vanillaEdit = false;
-                if (g.controller)
-                    hk_Refresh(g.controller);  // puts back the visuals / Edit Ammo prompt state
-            }
+            // The edit view closed. End the modes first so this action's own refresh puts back the
+            // coil slots and the Edit Ammo prompt.
+            EndAmmoMode();
+            g.vanillaEdit = false;
         }
+
+        o_GraphExecute(action, menu, sender, event);
     }
 
     String* hk_GetString(void* text, String* out)
@@ -816,7 +815,8 @@ namespace
         return o_GetString(text, out);
     }
 
-    // Menu action "PopulateModsForEditTool": entry into the edit-coils view.
+    // Menu action "PopulateModsForEditTool": entry into the edit-coils view, and with the mouse also
+    // the pointer entering one of its slots.
     void hk_PopulateModsExport(void* controller)
     {
         if (g.entering)
@@ -829,10 +829,10 @@ namespace
             if (g.ammoMode)
                 ApplyModeTexts(c);
         }
-        else
+        else if (!InAmmoMode(controller))  // in ammo mode hk_PopulateMods writes the ammo again
         {
             // Plain Edit Coils (or Edit Weaves): keep the mod's Restore Default Ammo prompt hidden.
-            EndAmmoMode(false);
+            EndAmmoMode();  // left over from another controller
             g.vanillaEdit = true;
             ShowRestorePrompt(static_cast<uint8_t*>(controller), false);
         }
@@ -932,7 +932,7 @@ namespace
     // Menu action "PopulateWeapons": the weapons tab is (re)built, so no edit view is open.
     void hk_PopulateWeaponsExport(void* controller)
     {
-        EndAmmoMode(false);
+        EndAmmoMode();
         g.vanillaEdit = false;
         o_PopulateWeaponsExport(controller);
     }
