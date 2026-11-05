@@ -92,7 +92,12 @@ The same tag also adds the zip as a new version of the mod's file on Nexus Mods,
 
 Each upload archives the previous version, sets the mod's version to the tag (without the `v`) and adds a changelog entry linking to the GitHub release. Until `NEXUS_FILE_ID` is set the `nexus` job is skipped.
 
-Releases are immutable, so re-running a whole tag run fails at publishing the release. To retry a failed upload, use "Re-run failed jobs". To upload a release that was published before the repository was set up, run the Build workflow by hand (Actions → Build → Run workflow, from `main`) with that release's tag; it uploads the release's zip.
+Releases are immutable, so re-running a whole tag run fails at publishing the release. To retry a failed upload, use "Re-run failed jobs". To upload a release that was published before the repository was set up, push a tag named `nexus-` plus that release's tag; it uploads the release's zip and can be deleted afterwards:
+
+```
+git tag nexus-v1.0.1
+git push origin nexus-v1.0.1
+```
 
 ## How it works
 
