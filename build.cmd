@@ -33,7 +33,7 @@ cl /nologo /c /O2 /MT /W3 /Fo"%ROOT%build\obj\\" ^
 
 cl /nologo /c /O2 /MT /W4 /EHsc /std:c++20 /permissive- /DWIN32_LEAN_AND_MEAN /DNOMINMAX /DAMMOSWAP_VERSION=\"%AMMOSWAP_VERSION%\" ^
   /I"%MH%\include" /Fo"%ROOT%build\obj\\" ^
-  "%ROOT%src\main.cpp" "%ROOT%src\hooks.cpp" "%ROOT%src\ammo.cpp" "%ROOT%src\menu.cpp" "%ROOT%src\log.cpp" "%ROOT%src\crashlog.cpp" || exit /b 1
+  "%ROOT%src\main.cpp" "%ROOT%src\hooks.cpp" "%ROOT%src\ammo.cpp" "%ROOT%src\menu.cpp" "%ROOT%src\log.cpp" "%ROOT%src\crashlog.cpp" "%ROOT%src\signatures.cpp" || exit /b 1
 link /nologo /DLL /OUT:"%ROOT%build\HFWAmmoSwap.dll" /PDB:"%ROOT%build\HFWAmmoSwap.pdb" /DEBUG:FULL /OPT:REF /OPT:ICF ^
   "%ROOT%build\obj\*.obj" user32.lib kernel32.lib psapi.lib || exit /b 1
 

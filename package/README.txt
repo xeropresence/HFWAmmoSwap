@@ -25,7 +25,7 @@ The changes are part of your save.
 REQUIREMENTS
 ------------
 
-- Horizon Forbidden West Complete Edition 1.5.80.0 (Steam).
+- Horizon Forbidden West Complete Edition (made on 1.5.80.0, Steam).
 - Native Loader: https://www.nexusmods.com/horizonforbiddenwest/mods/223
 
 
@@ -49,5 +49,5 @@ Then delete the nativemods\HFWAmmoSwap folder.
 TROUBLESHOOTING
 ---------------
 
-The mod writes HFWAmmoSwap.log next to its DLL. On other game versions it disables itself and says
-so in the log.
+The mod writes HFWAmmoSwap.log next to its DLL. At startup it looks for the game code it uses; on
+a game version where it can't find all of it, it disables itself and says so in the log.

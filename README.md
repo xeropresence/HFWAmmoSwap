@@ -19,7 +19,7 @@ A [Native Loader](https://www.nexusmods.com/horizonforbiddenwest/mods/223) mod f
 
 ## Requirements
 
-- Horizon Forbidden West Complete Edition **v1.5.80.0** (Steam). On other versions the mod turns itself off and says so in its log.
+- Horizon Forbidden West Complete Edition. Made on **v1.5.80.0** (Steam). At startup the mod looks for the game code it uses; on a version where it can't find all of it, it turns itself off and says so in its log.
 - [Native Loader](https://www.nexusmods.com/horizonforbiddenwest/mods/223).
 
 ## Installation
@@ -61,7 +61,7 @@ Use **Restore Default Ammo** on every weapon you changed and save. A save with a
 
 ## Troubleshooting
 
-The mod writes `HFWAmmoSwap.log` next to its DLL: load and version check, opening and closing Edit Ammo, every swap, and the location of any crash. Include it when you report a problem.
+The mod writes `HFWAmmoSwap.log` next to its DLL: game build and address lookup, opening and closing Edit Ammo, every swap, and the location of any crash. Include it when you report a problem.
 
 ## Building
 
@@ -101,6 +101,7 @@ The mod hooks the game's `InventoryMenuController` and menu code:
 - **Slots**: swaps rewrite the weapon's `AmmoSlotsComponent` slots in place (or its saved runtime data when the weapon isn't spawned). Adding and removing slots move the slots' weak pointers the way the game's own slot unlocks do.
 - **Loading**: weapons load every ammo type they support, not only their default ones, so swapped-in ammo is available after loading a save.
 - **Item details**: the Ammo panel shows what each slot actually holds, and the same panel code works out the damage lines for ammo descriptions.
+- **Game addresses**: nothing is hardcoded. At startup `src/signatures.cpp` finds every function and data address it needs in the loaded game: byte patterns of function starts or of the code calling them, MSVC vtables by class name, and Decima RTTI descriptors by type name. Each lookup must find exactly one match, otherwise the mod stays off. The patterns were made with `tools/make_signatures.py` (IDA Python); after a game update breaks one, find the function again and run `code_sig(ea)` or `ref_sig(target)` for a new pattern.
 
 ## Credits
 

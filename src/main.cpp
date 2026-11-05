@@ -1,8 +1,8 @@
 #include "ammo.h"
 #include "crashlog.h"
-#include "game.h"
 #include "hooks.h"
 #include "log.h"
+#include "signatures.h"
 
 #include <Windows.h>
 
@@ -38,10 +38,10 @@ extern "C" __declspec(dllexport) void NativeLoaderInit(NativeLoaderCallbacks*)
     crashlog::Install();
 
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const uint32_t timestamp = ImageTimestamp(base);
-    if (timestamp != game::kExpectedTimestamp)
+    LOG("Game build timestamp 0x%08X", ImageTimestamp(base));
+    if (!signatures::Resolve(base))
     {
-        LOG("Unsupported game build (timestamp 0x%08X, expected 0x%08X); ammo swap disabled", timestamp, game::kExpectedTimestamp);
+        LOG("This game build isn't supported; ammo swap disabled");
         return;
     }
 

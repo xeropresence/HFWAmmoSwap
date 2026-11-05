@@ -1,16 +1,14 @@
 #pragma once
 
-// Horizon Forbidden West 1.5.80.0 (PE timestamp 0x667B1777) engine structures and functions.
-// Offsets come from the game's RTTI (odradek types.json) and from the decompiled callers that
-// use them; function addresses are RVAs relative to the image base.
+// Horizon Forbidden West engine structures and functions. Offsets come from the game's RTTI
+// (odradek types.json) and from the decompiled callers that use them; they were taken from
+// 1.5.80.0. Function and data addresses are found at startup (signatures.cpp).
 
 #include <cstdint>
 #include <cstring>
 
 namespace game
 {
-    constexpr uint32_t kExpectedTimestamp = 0x667B1777;
-
     struct GGUUID
     {
         uint64_t lo = 0;
@@ -202,84 +200,86 @@ namespace game
         constexpr size_t Slots = 88;         // Array<AmmoSlot>
     }
 
-    // ---- Function RVAs --------------------------------------------------------------------------
+    // ---- Game addresses -------------------------------------------------------------------------
+    // RVAs relative to the image base, filled in by signatures::Resolve before anything uses them.
     namespace rva
     {
-        constexpr uintptr_t GetComponent = 0x08FA230;               // void*(void* container, RTTI*)
-        constexpr uintptr_t GetAmmoSlotsSettings = 0x129EFA0;       // void*(InventoryItemResource*)
-        constexpr uintptr_t FindSupportedAmmoItem = 0x1233C50;      // InventoryItemResource*(AmmoSlotsSettings*, GGUUID*)
-        constexpr uintptr_t GetAmmoSlotsRuntimeData = 0x129F570;    // void*(InventoryItem*), null while spawned
-        constexpr uintptr_t InventoryFindItem = 0x1206550;          // InventoryItem*(Inventory*, GGUUID* entity uuid)
-        constexpr uintptr_t InventoryGetItems = 0x12064A0;          // void(Inventory*, Array<InventoryItem*>*)
-        constexpr uintptr_t GetLoadedAmmoResource = 0x129B690;      // AmmoResource*(AmmoSlotsComponent*, GGUUID*)
-        constexpr uintptr_t GetUpgradableWeaponSettings = 0x159C820; // void*(InventoryItemResource*)
-        constexpr uintptr_t SelectAmmoSlot = 0x129C770;             // bool(AmmoSlotsComponent*, int): sends MsgSelectAmmoSlot for that slot
-        constexpr uintptr_t ReallocAmmoSlots = 0x12A1160;           // AmmoSlot*(Array<AmmoSlot>*, AmmoSlot* oldData, int capacity): moves slots, frees old, sets capacity
-        constexpr uintptr_t ReserveGuids = 0x00E7E60;               // GGUUID*(Array<GGUUID>*, int count): ensures capacity, returns data
-        constexpr uintptr_t GetUpgradeCount = 0x123D560;            // int(InventoryItem*, void* unused): upgrade level + 1, -1 if not upgradable
-        constexpr uintptr_t BindSlotInventoryItem = 0x129C840;      // bool(AmmoSlotsComponent*, int, InventoryItem*)
-        constexpr uintptr_t StreamingRefCopy = 0x06AEDF0;           // void(StreamingHandle** dst, StreamingHandle** src)
-        constexpr uintptr_t Realloc = 0x01E6260;                    // void*(void*, size_t); size 0 frees
-        constexpr uintptr_t Alloc = 0x01E6100;                      // void*(size_t)
+        inline uintptr_t GetComponent;                // void*(void* container, RTTI*)
+        inline uintptr_t GetAmmoSlotsSettings;        // void*(InventoryItemResource*)
+        inline uintptr_t FindSupportedAmmoItem;       // InventoryItemResource*(AmmoSlotsSettings*, GGUUID*)
+        inline uintptr_t GetAmmoSlotsRuntimeData;     // void*(InventoryItem*), null while spawned
+        inline uintptr_t InventoryFindItem;           // InventoryItem*(Inventory*, GGUUID* entity uuid)
+        inline uintptr_t InventoryGetItems;           // void(Inventory*, Array<InventoryItem*>*)
+        inline uintptr_t GetLoadedAmmoResource;       // AmmoResource*(AmmoSlotsComponent*, GGUUID*)
+        inline uintptr_t GetUpgradableWeaponSettings; // void*(InventoryItemResource*)
+        inline uintptr_t SelectAmmoSlot;              // bool(AmmoSlotsComponent*, int): sends MsgSelectAmmoSlot for that slot
+        inline uintptr_t ReallocAmmoSlots;            // AmmoSlot*(Array<AmmoSlot>*, AmmoSlot* oldData, int capacity): moves slots, frees old, sets capacity
+        inline uintptr_t ReserveGuids;                // GGUUID*(Array<GGUUID>*, int count): ensures capacity, returns data
+        inline uintptr_t GetUpgradeCount;             // int(InventoryItem*, void* unused): upgrade level + 1, -1 if not upgradable
+        inline uintptr_t BindSlotInventoryItem;       // bool(AmmoSlotsComponent*, int, InventoryItem*)
+        inline uintptr_t StreamingRefCopy;            // void(StreamingHandle** dst, StreamingHandle** src)
+        inline uintptr_t Realloc;                     // void*(void*, size_t); size 0 frees
+        inline uintptr_t Alloc;                       // void*(size_t)
 
         // Decima String (refcounted, pointer to chars)
-        constexpr uintptr_t StringCtor = 0x0108010;                 // void(String*, const char*, int length)
-        constexpr uintptr_t StringRelease = 0x0107850;              // void(String*)
-        constexpr uintptr_t EmptyString = 0x1CAABF0;                // chars of the shared empty String
+        inline uintptr_t StringCtor;                  // void(String*, const char*, int length)
+        inline uintptr_t StringRelease;               // void(String*)
+        inline uintptr_t EmptyString;                 // chars of the shared empty String
 
         // Menu data tree (InventoryMenuController + 144); nodes are addressed by name + index
-        constexpr uintptr_t NodeChild = 0x0380460;                  // Node*(Tree*, Node* parent, String* name, int index), creates
-        constexpr uintptr_t NodeCount = 0x03A1DD0;                  // int(Node* parent, String* name)
-        constexpr uintptr_t NodeRemove = 0x0380690;                 // void(Tree*, Node* parent, String* name, int index)
-        constexpr uintptr_t NodeSetBool = 0x0D2BBE0;                // void(Node*, bool)
-        constexpr uintptr_t NodeSetInt = 0x037BF20;                 // void(Node*, int)
-        constexpr uintptr_t NodeSetObject = 0x03A3770;              // void(Node*, void*), raw pointer
-        constexpr uintptr_t NodeSetString = 0x03869A0;              // bool(Tree*, Node*, String*)
-        constexpr uintptr_t NodeSetText = 0x0380310;                // bool(Tree*, Node*, LocalizedTextResource*)
-        constexpr uintptr_t NodeMarkDirty = 0x0198370;              // void(DirtySet* (tree + 104), uint32 crc32c(node), Node**)
-        constexpr uintptr_t NodeItemInfo = 0x15D2700;               // void(Tree*, Node*, InventoryItemResource*, bool): name, icon, description...
-        constexpr uintptr_t NodeItemRarity = 0x15D3610;             // void(Tree*, Node*, uint8 rarity)
-        constexpr uintptr_t NodeItemOwned = 0x15D4130;              // void(Tree*, Node*, Inventory*, InventoryItemResource*, int, int)
-        constexpr uintptr_t ItemIcon = 0x120A250;                   // UITexture*(InventoryItemResource*)
+        inline uintptr_t NodeChild;                   // Node*(Tree*, Node* parent, String* name, int index), creates
+        inline uintptr_t NodeCount;                   // int(Node* parent, String* name)
+        inline uintptr_t NodeRemove;                  // void(Tree*, Node* parent, String* name, int index)
+        inline uintptr_t NodeSetBool;                 // void(Node*, bool)
+        inline uintptr_t NodeSetInt;                  // void(Node*, int)
+        inline uintptr_t NodeSetObject;               // void(Node*, void*), raw pointer
+        inline uintptr_t NodeSetString;               // bool(Tree*, Node*, String*)
+        inline uintptr_t NodeSetText;                 // bool(Tree*, Node*, LocalizedTextResource*)
+        inline uintptr_t NodeMarkDirty;               // void(DirtySet* (tree + 104), uint32 crc32c(node), Node**)
+        inline uintptr_t NodeItemInfo;                // void(Tree*, Node*, InventoryItemResource*, bool): name, icon, description...
+        inline uintptr_t NodeItemRarity;              // void(Tree*, Node*, uint8 rarity)
+        inline uintptr_t NodeItemOwned;               // void(Tree*, Node*, Inventory*, InventoryItemResource*, int, int)
+        inline uintptr_t ItemIcon;                    // UITexture*(InventoryItemResource*)
 
         // Hook targets
-        constexpr uintptr_t InventoryItem_LoadDependencies = 0x120A8B0;  // void(InventoryItem*, Callback* onLoaded)
-        constexpr uintptr_t AmmoSlotsSettings_CollectRefs = 0x1233CD0;   // void(AmmoSlotsSettings*, Array<StreamingHandle*>*)
-        constexpr uintptr_t LocalizedText_GetString = 0x06BEE20;         // String*(LocalizedTextResource*, String* out)
-        constexpr uintptr_t MenuInputBinding_Matches = 0x038C410;        // bool(MenuInputEventBinding*, Event*)
-        constexpr uintptr_t MenuGraphAction_Execute = 0x0373030;         // void(MenuActionGraphProgram*, Menu*, Sender*, Event*)
-        constexpr uintptr_t InvMenu_RefreshItemSelected = 0x153B770;     // void(InventoryMenuController*)
-        constexpr uintptr_t InvMenu_PopulateModsExport = 0x15AC350;      // thunk called by the menu's "PopulateModsForEditTool" action
-        constexpr uintptr_t InvMenu_PopulateMods = 0x1541EC0;            // void(InventoryMenuController*)
-        constexpr uintptr_t InvMenu_SelectMod = 0x153DBF0;               // void(InventoryMenuController*, ModificationSocketResource*)
-        constexpr uintptr_t InvMenu_SelectFirstModSocket = 0x153EB60;    // void(InventoryMenuController*)
-        constexpr uintptr_t InvMenu_PreviewMod = 0x153DD20;              // void(InventoryMenuController*, InventoryItem*)
-        constexpr uintptr_t InvMenu_PopulateWeaponsExport = 0x15AC490;   // thunk called by the menu's "PopulateWeapons" action
-        constexpr uintptr_t InvMenu_EquipSelectedMod = 0x153E730;        // void(InventoryMenuController*, bool* result)
-        constexpr uintptr_t InvMenu_UnequipSelectedMod = 0x153EAC0;      // void(InventoryMenuController*)
-        constexpr uintptr_t InvMenu_Destroy = 0x1535CB0;                 // void*(InventoryMenuController*, int flags), vtable slot 1
+        inline uintptr_t InventoryItem_LoadDependencies; // void(InventoryItem*, Callback* onLoaded)
+        inline uintptr_t AmmoSlotsSettings_CollectRefs;  // void(AmmoSlotsSettings*, Array<StreamingHandle*>*)
+        inline uintptr_t LocalizedText_GetString;        // String*(LocalizedTextResource*, String* out), vtable slot 4
+        inline uintptr_t MenuInputBinding_Matches;       // bool(MenuInputEventBinding*, Event*), vtable slot 4
+        inline uintptr_t MenuGraphAction_Execute;        // void(MenuActionGraphProgram*, Menu*, Sender*, Event*), vtable slot 4
+        inline uintptr_t InvMenu_RefreshItemSelected;    // void(InventoryMenuController*)
+        inline uintptr_t InvMenu_PopulateModsExport;     // thunk called by the menu's "PopulateModsForEditTool" action
+        inline uintptr_t InvMenu_PopulateMods;           // void(InventoryMenuController*)
+        inline uintptr_t InvMenu_SelectMod;              // void(InventoryMenuController*, ModificationSocketResource*)
+        inline uintptr_t InvMenu_SelectFirstModSocket;   // void(InventoryMenuController*)
+        inline uintptr_t InvMenu_PreviewMod;             // void(InventoryMenuController*, InventoryItem*)
+        inline uintptr_t InvMenu_PopulateWeaponsExport;  // thunk called by the menu's "PopulateWeapons" action
+        inline uintptr_t InvMenu_PopulateWeapons;        // void(InventoryMenuController*), only used to find its thunk
+        inline uintptr_t InvMenu_EquipSelectedMod;       // void(InventoryMenuController*, bool* result)
+        inline uintptr_t InvMenu_UnequipSelectedMod;     // void(InventoryMenuController*)
+        inline uintptr_t InvMenu_Destroy;                // void*(InventoryMenuController*, int flags), vtable slot 1
         // Item details "ammo" list (ammo types with damage): written from the weapon's default ammo
-        constexpr uintptr_t ItemPanel_WriteAmmo = 0x15D9100;       // void(Tree*, Node*, InventoryItemResource*, InventoryItem* (may be null), UpgradableWeaponSettings*, int level, int previewLevel, int maxLevel, 3 more)
-        constexpr uintptr_t ItemPanel_WriteAmmoEntry = 0x15DA500;  // bool(Tree*, Node*, int* entryIndex, GGUUID* ammo, AmmoSlotsSettings*, 5 more)
+        inline uintptr_t ItemPanel_WriteAmmo;       // void(Tree*, Node*, InventoryItemResource*, InventoryItem* (may be null), UpgradableWeaponSettings*, int level, int previewLevel, int maxLevel, 3 more)
+        inline uintptr_t ItemPanel_WriteAmmoEntry;  // bool(Tree*, Node*, int* entryIndex, GGUUID* ammo, AmmoSlotsSettings*, 5 more)
         // Menu text elements
-        constexpr uintptr_t TextTag_BindText = 0x3C7E40;  // void(TextTag*, MenuDataBinding*, MemberFn* setter): evaluates static bindings now, subscribes dynamic ones
-        constexpr uintptr_t TextTag_SetText = 0x3B86F0;   // void(TextTag*, const String&), the setter TextTag passes to BindText
-        constexpr uintptr_t WeakPtrLink = 0x011E4F0;       // void(WeakPtr*) with target set
-        constexpr uintptr_t WeakPtrUnlink = 0x011E570;     // void(WeakPtr*), clears it
-        constexpr uintptr_t VT_MenuLocalizedTextBinding = 0x183D6E8;
-        constexpr uintptr_t InventoryUiSettingsPtr = 0x8983128;  // data: InventoryUiSettings*
-        constexpr uintptr_t Tag_OnEvent = 0x3BF800;              // void(Tag*, TagEvent*), base handler every tag runs
-        constexpr uintptr_t Tag_AddEventHandler = 0x3BE2F0;      // void(Tag::EventHandlers set*, MenuEventBinding** ref, Tag*)
+        inline uintptr_t TextTag_BindText;    // void(TextTag*, MenuDataBinding*, MemberFn* setter): evaluates static bindings now, subscribes dynamic ones
+        inline uintptr_t TextTag_SetText;     // void(TextTag*, const String&), the setter TextTag passes to BindText
+        inline uintptr_t WeakPtrLink;         // void(WeakPtr*) with target set
+        inline uintptr_t WeakPtrUnlink;       // void(WeakPtr*), clears it
+        inline uintptr_t VT_MenuLocalizedTextBinding;
+        inline uintptr_t InventoryUiSettingsPtr;  // data: InventoryUiSettings*
+        inline uintptr_t Tag_OnEvent;             // void(Tag*, TagEvent*), base handler every tag runs
+        inline uintptr_t Tag_AddEventHandler;     // void(Tag::EventHandlers set*, MenuEventBinding** ref, Tag*)
 
         // RTTI descriptors (type id/range at +0 are filled in by the engine at startup)
-        constexpr uintptr_t RTTI_Inventory = 0x21E41D0;
-        constexpr uintptr_t RTTI_AmmoSlotsComponent = 0x21F3C00;
-        constexpr uintptr_t RTTI_InventoryItemComponent = 0x21E3570;
-        constexpr uintptr_t RTTI_ModificationSocketResource = 0x21E6130;
-        constexpr uintptr_t RTTI_InventoryItem = 0x21E3150;
-        constexpr uintptr_t RTTI_MenuInputEventBinding = 0x2008F40;
-        constexpr uintptr_t RTTI_MenuLocalizedTextBinding = 0x200A1D0;
-        constexpr uintptr_t RTTI_LocalizedTextResource = 0x20D7D90;
+        inline uintptr_t RTTI_Inventory;
+        inline uintptr_t RTTI_AmmoSlotsComponent;
+        inline uintptr_t RTTI_InventoryItemComponent;
+        inline uintptr_t RTTI_ModificationSocketResource;
+        inline uintptr_t RTTI_InventoryItem;
+        inline uintptr_t RTTI_MenuInputEventBinding;
+        inline uintptr_t RTTI_MenuLocalizedTextBinding;
+        inline uintptr_t RTTI_LocalizedTextResource;
     }
 
     // ---- RTTI descriptor (compound) ---------------------------------------------------------------
