@@ -6,6 +6,10 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Upload the zip of this existing release (for example v1.0.1) to Nexus Mods
+        required: false
 
 permissions:
   contents: write
@@ -50,20 +54,35 @@ jobs:
           files: build/HFWAmmoSwap-${{ env.AMMOSWAP_VERSION }}.zip
           generate_release_notes: true
 
-      # Adds the zip as a new version of the mod's existing Nexus Mods file. Needs the repository
-      # secret NEXUSMODS_API_KEY and the variables NEXUS_MOD_ID and NEXUS_FILE_ID; skipped until
-      # NEXUS_FILE_ID is set.
+  # Adds the release zip as a new version of the mod's existing Nexus Mods file: on a version tag,
+  # or for an existing release when the workflow is run by hand with its tag. Needs the repository
+  # secret NEXUSMODS_API_KEY and the variables NEXUS_MOD_ID and NEXUS_FILE_ID; skipped until
+  # NEXUS_FILE_ID is set. A separate job, so a failed upload can be retried with "Re-run failed
+  # jobs": the release itself is immutable and can't be published again.
+  nexus:
+    needs: build
+    if: vars.NEXUS_FILE_ID != '' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag != ''))
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Download the release zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "HFWAmmoSwap-$TAG.zip"
+          echo "NEXUS_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
       - name: Upload to Nexus Mods
-        if: startsWith(github.ref, 'refs/tags/v') && vars.NEXUS_FILE_ID != ''
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           mod_id: ${{ vars.NEXUS_MOD_ID }}
           file_id: ${{ vars.NEXUS_FILE_ID }}
-          filename: build/HFWAmmoSwap-${{ env.AMMOSWAP_VERSION }}.zip
+          filename: HFWAmmoSwap-${{ env.TAG }}.zip
           version: ${{ env.NEXUS_VERSION }}
           display_name: HFW Ammo Swap
           description: Requires Native Loader. Extract into <game folder>\nativemods\.
-          changelog: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          changelog: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.TAG }}
           archive_existing_version: true
           update_mod_version: true

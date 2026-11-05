@@ -88,9 +88,11 @@ The same tag also adds the zip as a new version of the mod's file on Nexus Mods,
 
 1. Upload the first zip to the Nexus Mods page by hand; the action can only add versions to an existing file.
 2. Note the mod ID and that file's ID (Files tab, "Advanced").
-3. In the GitHub repository settings, add the secret `NEXUSMODS_API_KEY` (a [Nexus Mods API key](https://www.nexusmods.com/settings/api-keys)) and the variables `NEXUS_MOD_ID` and `NEXUS_FILE_ID`.
+3. In the GitHub repository settings (Secrets and variables → Actions), add the secret `NEXUSMODS_API_KEY` (a [Nexus Mods API key](https://www.nexusmods.com/settings/api-keys)) on the Secrets tab, and `NEXUS_MOD_ID` and `NEXUS_FILE_ID` on the Variables tab.
 
-Each upload archives the previous version, sets the mod's version to the tag (without the `v`) and adds a changelog entry linking to the GitHub release. Until `NEXUS_FILE_ID` is set the step is skipped.
+Each upload archives the previous version, sets the mod's version to the tag (without the `v`) and adds a changelog entry linking to the GitHub release. Until `NEXUS_FILE_ID` is set the `nexus` job is skipped.
+
+Releases are immutable, so re-running a whole tag run fails at publishing the release. To retry a failed upload, use "Re-run failed jobs". To upload a release that was published before the repository was set up, run the Build workflow by hand (Actions → Build → Run workflow, from `main`) with that release's tag; it uploads the release's zip.
 
 ## How it works
 
