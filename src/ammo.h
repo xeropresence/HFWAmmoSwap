@@ -15,8 +15,8 @@ namespace ammo
     // True for weapons that support more than one ammo type (the weapons this mod edits).
     bool HasSwappableAmmo(void* itemResource);
 
-    // InventoryItem behind a spawned weapon's AmmoSlotsComponent, or null.
-    void* ItemFromAmmoComponent(void* component);
+    // InventoryItem a component of a spawned item entity (weapon) belongs to, or null.
+    void* ItemOfComponent(void* component);
 
     // Player inventory component of an item's owner, or null.
     void* OwnerInventory(void* item);

@@ -93,6 +93,12 @@ namespace game
     // ---- RTTIRefObject ---------------------------------------------------------------------------
     inline GGUUID& ObjectUUID(void* refObject) { return At<GGUUID>(refObject, 8); }
 
+    // Decima RTTI descriptor of an object's type (vtable slot 0).
+    inline void* RttiOf(void* object) { return (*static_cast<void* (***)(void*)>(object))[0](object); }
+
+    // First half of the UUIDs of objects the mod makes ("AmmoSwap").
+    constexpr uint64_t kModUuidLo = 0x706177536F6D6D41ull;
+
     // ---- InventoryItemResource ---------------------------------------------------------------------
     namespace InventoryItemResource
     {
@@ -136,7 +142,8 @@ namespace game
     }
     namespace WeaponUpgradeDefinition
     {
-        constexpr size_t AmmoUnlocks = 120;  // Array<StreamingHandle*> of ammo entity resources
+        constexpr size_t NewBonusResources = 48;  // Array<CombatStatsBonusResource*> the weapon has at this level
+        constexpr size_t AmmoUnlocks = 120;       // Array<StreamingHandle*> of ammo entity resources
     }
 
     // ---- AmmoSlotsRuntimeData (saved per weapon item while it isn't spawned) ------------------------
@@ -149,6 +156,7 @@ namespace game
     // ---- Entity / components ----------------------------------------------------------------------
     namespace Entity
     {
+        constexpr size_t Owner = 128;       // Entity* that gets an equipment entity's bonuses (the wielder)
         constexpr size_t Components = 160;  // container searched by GetComponent
     }
 
@@ -200,6 +208,69 @@ namespace game
         constexpr size_t Slots = 88;         // Array<AmmoSlot>
     }
 
+    // ---- Damage bonuses ---------------------------------------------------------------------------
+    // A weapon raises the damage and build-up of damage types through CombatStatsDamageDealtBonus-
+    // Resources: a definition (which damage types, under which conditions) and a value. Those of its
+    // EquipmentStatsSettings and of its upgrade level are added to the wielder's CombatStatsComponent
+    // while the weapon is wielded. Multipliers of one stack group add up (x2.29 and x1.87 make x3.16).
+    namespace CombatStatsBonus
+    {
+        constexpr size_t Definition = 32;      // CombatStatsDamageDealtDefinition*
+        constexpr size_t Value = 40;           // CombatStatsDamageValue*
+        constexpr size_t AddToCollection = 4;  // vtable slot: void(Bonus*, BonusCollection*)
+    }
+    namespace CombatStatsDefinition
+    {
+        constexpr size_t ConditionOnAffectedEntity = 40;   // ConditionResource*
+        constexpr size_t ConditionOnOwner = 48;            // ConditionResource*
+        constexpr size_t CombatEventConditionFilter = 56;  // CombatEventConditionFilter*
+        constexpr size_t DamageTypeFilter = 64;            // DamageTypeFilter*
+    }
+    namespace CombatStatsDamageValue
+    {
+        constexpr size_t StackGroup = 32;          // CombatStatsBonusStackGroup*
+        constexpr size_t StackGroupModifier = 40;  // CombatStatsBonusStackGroupModifier*
+        // float[5]: DamageAddition, DamageMultiplier, ImpactSeverityAddition, ImpactSeverityMultiplier,
+        // CoreDamageMultiplier
+        constexpr size_t Amounts = 48;
+        constexpr int AmountCount = 5;
+    }
+    // The game works out the mask of matching damage types from DamageTypes and Group on first use.
+    namespace DamageTypeFilter
+    {
+        constexpr size_t DamageTypes = 32;    // Array<DamageTypeResource*>
+        constexpr size_t Group = 48;          // DamageTypeGroup*
+        constexpr size_t FilterType = 56;     // uint8 EIncludeExcludeFilterType
+        constexpr uint8_t Include = 0;
+    }
+    namespace EquipmentStatsSettings
+    {
+        constexpr size_t Bonuses = 32;  // Array<CombatStatsBonusResource*>, the weapon's base stats
+    }
+    // InventoryItemSettings of ammo items; DisplayStats are the damage lines of the ammo's stats.
+    namespace AmmoSettings
+    {
+        constexpr size_t DisplayStats = 40;  // Array<CombatStatsDamageDisplayResource*>
+    }
+    namespace CombatStatsDamageDisplayResource
+    {
+        constexpr size_t BaseDamageSettings = 32;  // DamageSettings*
+    }
+    namespace DamageSettings
+    {
+        constexpr size_t DamageType = 32;  // DamageTypeResource*
+    }
+    // Components that add a weapon's bonuses to the wielder (`Activation` is passed along with them).
+    namespace EquipmentStatsComponent
+    {
+        constexpr size_t Activation = 80;  // uint16
+    }
+    namespace ItemUpgradeComponent
+    {
+        constexpr size_t Level = 84;        // int, -1 before the first upgrade
+        constexpr size_t Activation = 120;  // uint16
+    }
+
     // ---- Game addresses -------------------------------------------------------------------------
     // RVAs relative to the image base, filled in by signatures::Resolve before anything uses them.
     namespace rva
@@ -220,6 +291,10 @@ namespace game
         inline uintptr_t StreamingRefCopy;            // void(StreamingHandle** dst, StreamingHandle** src)
         inline uintptr_t Realloc;                     // void*(void*, size_t); size 0 frees
         inline uintptr_t Alloc;                       // void*(size_t)
+        inline uintptr_t GetAmmoSettings;             // AmmoSettings*(InventoryItemResource* of an ammo item)
+        inline uintptr_t DamageTypeFilter_Matches;    // bool(DamageTypeFilter*, DamageTypeResource*)
+        inline uintptr_t CombatStats_AddBonus;        // void(CombatStatsComponent*, Bonus*, GGUUID* key, uint16 activation)
+        inline uintptr_t CombatStats_RemoveBonus;     // void(CombatStatsComponent*, Bonus*, GGUUID* key, uint16 activation)
 
         // Decima String (refcounted, pointer to chars)
         inline uintptr_t StringCtor;                  // void(String*, const char*, int length)
@@ -270,6 +345,16 @@ namespace game
         inline uintptr_t InventoryUiSettingsPtr;  // data: InventoryUiSettings*
         inline uintptr_t Tag_OnEvent;             // void(Tag*, TagEvent*), base handler every tag runs
         inline uintptr_t Tag_AddEventHandler;     // void(Tag::EventHandlers set*, MenuEventBinding** ref, Tag*)
+        // Weapon damage bonuses
+        inline uintptr_t EquipmentStats_Apply;           // void(EquipmentStatsComponent*): adds its bonuses to the wielder
+        inline uintptr_t EquipmentStats_Remove;          // void(EquipmentStatsComponent*)
+        inline uintptr_t ItemUpgrade_Apply;              // void(ItemUpgradeComponent*): adds the bonuses of its upgrade level
+        inline uintptr_t ItemUpgrade_Remove;             // void(ItemUpgradeComponent*)
+        inline uintptr_t CombatStats_PrepareForRemoval;  // void(CombatStatsComponent*, Msg*)
+        // bool(BonusCollection*, InventoryItem*, int level, InventoryItem* addedCoil, InventoryItem* removedCoil):
+        // bonuses of a weapon item at an upgrade level with its coils, as the item details and the HUD
+        // list them to work out ammo damage
+        inline uintptr_t CollectItemBonuses;
 
         // RTTI descriptors (type id/range at +0 are filled in by the engine at startup)
         inline uintptr_t RTTI_Inventory;
@@ -280,6 +365,12 @@ namespace game
         inline uintptr_t RTTI_MenuInputEventBinding;
         inline uintptr_t RTTI_MenuLocalizedTextBinding;
         inline uintptr_t RTTI_LocalizedTextResource;
+        inline uintptr_t RTTI_CombatStatsComponent;
+        inline uintptr_t RTTI_CombatStatsDamageDealtBonusResource;
+        inline uintptr_t RTTI_CombatStatsDamageDealtDefinition;
+        inline uintptr_t RTTI_CombatStatsDamageValue;
+        inline uintptr_t RTTI_DamageTypeFilter;
+        inline uintptr_t RTTI_EquipmentStatsSettings;
     }
 
     // ---- RTTI descriptor (compound) ---------------------------------------------------------------

@@ -18,6 +18,10 @@ tripcasters, spike throwers, boltblasters and so on). Next to "Edit Coils" there
   comes with.
 - Ammo descriptions list the damage that ammo does with the weapon you are editing (the same
   numbers as its Ammo panel: the ammo's base damage with this weapon's upgrades and coils).
+- A weapon's upgrades only raise the damage types of the ammo it comes with. Ammo of another damage
+  type gets the weapon's highest damage and build-up bonuses for its own ammo instead, in combat and
+  in the Ammo panel. On the Sun Scourge, for example, Advanced Shock Hunter Arrows build up shock
+  like its acid arrows build up acid, instead of with their bare base value.
 
 The changes are part of your save.
 

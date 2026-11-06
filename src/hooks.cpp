@@ -1,6 +1,7 @@
 #include "hooks.h"
 
 #include "ammo.h"
+#include "bonus.h"
 #include "game.h"
 #include "hookutil.h"
 #include "log.h"
@@ -44,6 +45,7 @@ namespace hooks
         ok &= CreateHook(base, rva::InventoryItem_LoadDependencies, &hk_LoadDependencies, &o_LoadDependencies, "InventoryItem::LoadDependencies");
         ok &= CreateHook(base, rva::AmmoSlotsSettings_CollectRefs, &hk_CollectRefs, &o_CollectRefs, "AmmoSlotsSettings::CollectRefs");
         ok &= menu::CreateHooks(base);
+        ok &= bonus::CreateHooks(base);
         if (!ok)
             return false;
         return MH_EnableHook(MH_ALL_HOOKS) == MH_OK;

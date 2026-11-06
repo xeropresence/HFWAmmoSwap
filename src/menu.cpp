@@ -1,6 +1,7 @@
 #include "menu.h"
 
 #include "ammo.h"
+#include "bonus.h"
 #include "game.h"
 #include "hookutil.h"
 #include "log.h"
@@ -104,7 +105,6 @@ namespace
     constexpr GGUUID kPagePanel = ParseGuid("e21869c5-2dd2-d546-b3c7-7af576c7d7c4");          // inventory page panel
     constexpr GGUUID kVisualsBinding = ParseGuid("2a2a9681-6a4e-9642-b268-a548680cc58e");     // outfit "Apply Visuals" input binding
     constexpr int32_t kFunctionInbox = 20;  // EMenuInputFunction FUNCTION_INBOX: Triangle, F on keyboard
-    constexpr uint64_t kModUuidLo = 0x706177536F6D6D41ull;  // "AmmoSwap": first half of the mod's own object UUIDs
     // "CloseEditModsIfNotEditing": closes the edit-coils view when the pointer leaves its slot row (or
     // list) before a slot was picked, since hovering the coils also opens it.
     constexpr GGUUID kPointerLeftEditView = ParseGuid("efb032d2-ef7c-b547-8d05-b1402d5fa566");
@@ -631,6 +631,7 @@ namespace
         s_last = now;
         const bool ok = ammo::RestoreDefaults(g.weapon);
         LOG("Edit Ammo: default ammo restored -> %s", ok ? "ok" : "failed");
+        bonus::Refresh(g.weapon);  // also after a partial restore
         g.selectedSlot = std::min(g.selectedSlot, ammo::SlotCapacity(g.weapon) - 1);
         RefreshAmmoView(g.controller);
     }
@@ -904,6 +905,8 @@ namespace
             {
                 const bool ok = ammo::SetSlotAmmo(g.weapon, g.selectedSlot, ammo);
                 LOG("Edit Ammo: slot %d -> %s", g.selectedSlot, ok ? "swapped" : "rejected");
+                if (ok)
+                    bonus::Refresh(g.weapon);
             }
             else
             {
@@ -911,7 +914,10 @@ namespace
                 const bool ok = ammo::AddSlot(g.weapon, ammo);
                 LOG("Edit Ammo: slot %d -> %s", filled, ok ? "added" : "rejected");
                 if (ok)
+                {
                     g.selectedSlot = filled;
+                    bonus::Refresh(g.weapon);
+                }
             }
         }
         g.previewAmmo = {};
@@ -926,6 +932,8 @@ namespace
             return o_Unequip(controller);
         const bool ok = ammo::RemoveSlot(g.weapon, g.selectedSlot);
         LOG("Edit Ammo: slot %d removed -> %s", g.selectedSlot, ok ? "ok" : "rejected");
+        if (ok)
+            bonus::Refresh(g.weapon);
         RefreshAmmoView(static_cast<uint8_t*>(controller));
     }
 
@@ -1029,7 +1037,8 @@ namespace
     }
 
     // One line per damage stat ("<icon> Impact 192"), with the numbers the item details ammo list
-    // shows: the game writes a one-entry list for `ammo` on the edited weapon into a scratch node.
+    // shows: the game writes a one-entry list for `ammo` on the edited weapon into a scratch node. The
+    // numbers are those of the weapon holding `ammo`, damage bonuses for swapped-in ammo included.
     std::string AmmoStatsText(uint8_t* controller, const GGUUID& ammo)
     {
         const Tree t(controller);
@@ -1039,10 +1048,13 @@ namespace
         weapon.capacity = INT_MAX;  // entry 0 shows `ammo`, the rest are left out
         PanelWeapon* outer = t_panelWeapon;
         t_panelWeapon = &weapon;
-        // previewLevel -1: no upgrade preview; maxLevel -1: skips the upgrade unlock entries, which
-        // are the only users of the upgrade settings argument.
-        o_WriteAmmoPanel(t.tree(), scratch, ammo::ItemResource(g.weapon), g.weapon, nullptr,
-                         uint64_t(int64_t(ammo::UpgradeLevel(g.weapon))), uint64_t(-1), uint64_t(-1), 0, 0, 0);
+        {
+            const bonus::PreviewAmmo preview(weapon.slots);
+            // previewLevel -1: no upgrade preview; maxLevel -1: skips the upgrade unlock entries, which
+            // are the only users of the upgrade settings argument.
+            o_WriteAmmoPanel(t.tree(), scratch, ammo::ItemResource(g.weapon), g.weapon, nullptr,
+                             uint64_t(int64_t(ammo::UpgradeLevel(g.weapon))), uint64_t(-1), uint64_t(-1), 0, 0, 0);
+        }
         t_panelWeapon = outer;
 
         std::string text;

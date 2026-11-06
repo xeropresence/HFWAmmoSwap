@@ -121,7 +121,7 @@ namespace ammo
         return settings && At<Array<void*>>(settings, AmmoSlotsSettings::SupportedAmmos).count > 1;
     }
 
-    void* ItemFromAmmoComponent(void* component)
+    void* ItemOfComponent(void* component)
     {
         void* entity = component ? At<void*>(component, EntityComponent::Entity) : nullptr;
         if (!entity)

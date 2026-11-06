@@ -15,6 +15,7 @@ A [Native Loader](https://www.nexusmods.com/horizonforbiddenwest/mods/223) mod f
 - **Remove** ammo from a slot to cycle through fewer ammo types.
 - **Restore** the ammo the weapon comes with in one press.
 - **Damage per ammo type**: ammo descriptions list the damage that ammo does on the weapon you are editing, with its upgrades and coils.
+- **Upgrades work for swapped-in ammo**: a weapon's upgrades only raise the damage types of the ammo it comes with. Ammo of another damage type gets the weapon's best damage and build-up bonuses instead of its bare base values (see [Damage numbers](#damage-numbers)).
 - The weapon's Ammo panel and the HUD show the new ammo. Changes are stored in your save like the game's own ammo.
 
 ## Requirements
@@ -54,6 +55,8 @@ There is no separate unlock list. When the list opens, the mod checks every weap
 ### Damage numbers
 
 The numbers come from the same game code that fills a weapon's Ammo panel: the ammo's base damage, adjusted by that weapon's bonuses for each damage type (its upgrade level and coils). The same arrow can do different damage on different bows of a family.
+
+A weapon's base stats and upgrades raise the damage and build-up of particular damage types: those of the ammo it comes with. The Sun Scourge's raise fire, frost and acid, so in the game Advanced Shock Hunter Arrows would keep their base shock build-up of 50 on it, against 286 on the fully upgraded Death-Seeker's Shadow. For each damage type of the ammo a weapon holds that neither its own ammo has nor any of its bonuses raises, the mod gives the weapon one more bonus, made of its bonuses for its own ammo: the highest damage multiplier, the highest build-up multiplier and so on. Without coils, on a fully upgraded Sun Scourge Advanced Shock Hunter Arrows then get the multipliers of its acid arrows (its highest), 328 shock build-up; on a fully upgraded The Final Chapter, Acid Shredders get those of its tear bonus, 99 acid build-up instead of 16. These bonuses count in combat while the weapon is wielded, like the weapon's own, and in the Ammo panel and ammo descriptions. Damage types of the ammo a weapon comes with keep the game's numbers.
 
 ## Uninstalling
 
@@ -108,6 +111,7 @@ The mod hooks the game's `InventoryMenuController` and menu code:
 - **Slots**: swaps rewrite the weapon's `AmmoSlotsComponent` slots in place (or its saved runtime data when the weapon isn't spawned). Adding and removing slots move the slots' weak pointers the way the game's own slot unlocks do.
 - **Loading**: weapons load every ammo type they support, not only their default ones, so swapped-in ammo is available after loading a save.
 - **Item details**: the Ammo panel shows what each slot actually holds, and the same panel code works out the damage lines for ammo descriptions.
+- **Damage bonuses**: for ammo of a damage type the weapon has no bonus for, the mod makes `CombatStatsDamageDealtBonusResource`s for that damage type out of the weapon's bonuses for its own ammo. They are added to and removed from the wielder's `CombatStatsComponent` next to the weapon's own (its `EquipmentStatsComponent` and `ItemUpgradeComponent`), again after each swap, and appended to the bonus lists the item details and the HUD work out ammo damage from.
 - **Game addresses**: nothing is hardcoded. At startup `src/signatures.cpp` finds every function and data address it needs in the loaded game: byte patterns of function starts or of the code calling them, MSVC vtables by class name, and Decima RTTI descriptors by type name. Each lookup must find exactly one match, otherwise the mod stays off. The patterns were made with `tools/make_signatures.py` (IDA Python); after a game update breaks one, find the function again and run `code_sig(ea)` or `ref_sig(target)` for a new pattern.
 
 ## Credits

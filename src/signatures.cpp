@@ -329,6 +329,10 @@ namespace
         CODE(StreamingRefCopy, "48 89 5C 24 10 48 89 74 24 18 41 56 48 83 EC 30 48 8B 01"),
         CODE(Realloc, "48 83 EC 28 4C 8B C2 4C 8B C9 48 85 C9 75 ? 48 85 D2"),
         CODE(Alloc, "48 89 5C 24 08 57 48 83 EC 20 65 48 8B 04 25 ? ? ? ? 48 8B F9 48 8B 18 B8 58 18 00 00 80 3C 18 00 75 ? E8 ? ? ? ? B8 10 1A 00 00 48 8B 0C 18 48 85 C9 75 ? 48 8B 0D ? ? ? ? 48 89 0C 18 48 8B 01 48 8B D7"),
+        REF(GetAmmoSettings, "E8 ? ? ? ? 48 89 44 24 38 4C 8B F0 C4 41 30 57 C9 48 85 C0", 1, 5),
+        CODE(DamageTypeFilter_Matches, "48 89 74 24 10 57 48 83 EC 20 48 8B FA 48 8B F1 48 85 D2 75 ? 32 C0 48 8B 74 24 38 48 83 C4 20 5F C3 4C 8B 41 30"),
+        CODE(CombatStats_AddBonus, "48 89 5C 24 18 48 89 6C 24 20 56 57 41 54 41 56 41 57 48 83 EC 60"),
+        CODE(CombatStats_RemoveBonus, "48 89 5C 24 10 48 89 6C 24 18 56 57 41 56 48 83 EC 20 48 8B 02"),
 
         CODE(StringCtor, "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 20 48 8B 01 48 8B EA"),
         CODE(StringRelease, "40 53 48 83 EC 20 48 8B 19 48 8D 05 ? ? ? ? 48 83 EB 10"),
@@ -374,6 +378,12 @@ namespace
         REF(InventoryUiSettingsPtr, "48 8B 05 ? ? ? ? C6 06 01 4C 8B 80 10 03 00 00 4D 85 C0", 3, 7),
         CODE(Tag_OnEvent, "48 8B C4 48 89 50 10 55 53 41 57 48 8D 68 A1 48 81 EC B0 00 00 00"),
         CODE(Tag_AddEventHandler, "40 53 56 57 48 83 EC 70 49 8B F0 48 8B DA 48 8B F9"),
+        CODE(EquipmentStats_Apply, "48 89 6C 24 20 56 41 54 41 56 48 83 EC 30 48 8B E9"),
+        CODE(EquipmentStats_Remove, "48 89 6C 24 20 56 41 54 41 57 48 83 EC 30 48 8B 41 48"),
+        CODE(ItemUpgrade_Apply, "4C 8B DC 57 48 81 EC 90 00 00 00 48 63 41 54 48 8B F9"),
+        CODE(ItemUpgrade_Remove, "40 56 48 83 EC 30 83 79 54 00 48 8B F1 48 8B 41 48"),
+        CODE(CombatStats_PrepareForRemoval, "48 89 5C 24 08 48 89 74 24 18 48 89 54 24 10 57 48 83 EC 20 48 8B 59 68"),
+        CODE(CollectItemBonuses, "40 53 41 54 41 56 41 57 48 83 EC 38 48 8B 42 48"),
 
         TYPE(RTTI_Inventory, "Inventory"),
         TYPE(RTTI_AmmoSlotsComponent, "AmmoSlotsComponent"),
@@ -383,6 +393,12 @@ namespace
         TYPE(RTTI_MenuInputEventBinding, "MenuInputEventBinding"),
         TYPE(RTTI_MenuLocalizedTextBinding, "MenuLocalizedTextBinding"),
         TYPE(RTTI_LocalizedTextResource, "LocalizedTextResource"),
+        TYPE(RTTI_CombatStatsComponent, "CombatStatsComponent"),
+        TYPE(RTTI_CombatStatsDamageDealtBonusResource, "CombatStatsDamageDealtBonusResource"),
+        TYPE(RTTI_CombatStatsDamageDealtDefinition, "CombatStatsDamageDealtDefinition"),
+        TYPE(RTTI_CombatStatsDamageValue, "CombatStatsDamageValue"),
+        TYPE(RTTI_DamageTypeFilter, "DamageTypeFilter"),
+        TYPE(RTTI_EquipmentStatsSettings, "EquipmentStatsSettings"),
     };
 
 #undef CODE
