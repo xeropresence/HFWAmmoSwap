@@ -92,9 +92,12 @@ namespace
     void* g_textTagSetText;                 // TextTag::SetText(const String&)
     void** g_inventoryUiSettings;           // global holding the InventoryUiSettings*
 
-    // "Restore Default Ammo" prompt (see hk_TagOnEvent)
-    void* g_restoreBinding;      // the mod's MenuInputEventBinding
-    void* g_visualsVisible;      // Visible binding of the outfit visuals prompt
+    // "Restore Default Ammo" prompt and Edit Ammo (see hk_TagOnEvent). The inventory menu's resources
+    // are streamed: some time after the menu closes they are unloaded, and when it opens again they are
+    // new objects. The mod keeps no pointers to them: the page panel's bindings are looked up in its
+    // live tag whenever they are used.
+    void* g_restoreBinding;      // the mod's MenuInputEventBinding, owned for good
+    WeakPtr g_pagePanel;         // inventory page panel tag last set up
     WeakPtr g_pendingSlotPanel;  // slot row tag set up before the page panel was seen
 
     // ---- objects of the inventory menu (package group 71865) ---------------------------------------
@@ -153,7 +156,6 @@ namespace
     {
         uint8_t* controller = nullptr;     // InventoryMenuController that last refreshed its detail panel
         bool swappableSelected = false;    // its selected item is a weapon with several ammo types
-        void* editCoilsBinding = nullptr;  // last seen "Edit Coils" binding instance
         bool entering = false;             // running the Edit Coils actions on behalf of "Edit Ammo"
         bool ammoMode = false;             // edit-coils view shows ammo
         bool vanillaEdit = false;          // edit-coils view shows coils (or weaves)
@@ -645,8 +647,6 @@ namespace
                 RestoreDefaultsFromInput();
             return matched;
         }
-        if (ObjectUUID(binding) == kEditCoilsBinding)
-            g.editCoilsBinding = binding;
         return o_Matches(binding, event);
     }
 
@@ -655,6 +655,28 @@ namespace
     // set up, the mod adds one more: Triangle (F on keyboard), no actions of its own (hk_Matches acts on
     // it), shown in the button legend like the game's prompts. It reuses the outfit visuals prompt's
     // visibility (current/show_visuals_option), which is only set while the view shows ammo.
+
+    // Binding `id` of the inventory page panel as it is loaded now, or null.
+    void* PagePanelBinding(const GGUUID& id)
+    {
+        auto* target = static_cast<uint8_t*>(g_pagePanel.target);
+        void* resource = target ? At<void*>(target - Tag::WeakTarget, Tag::Resource) : nullptr;
+        if (!resource)
+            return nullptr;
+        for (void* binding : At<Array<void*>>(resource, MenuElementResource::EventHandlers))
+        {
+            if (binding && ObjectUUID(binding) == id)
+                return binding;
+        }
+        return nullptr;
+    }
+
+    void* VisualsVisible()
+    {
+        void* binding = PagePanelBinding(kVisualsBinding);
+        return binding ? At<void*>(binding, MenuInputEventBinding::Visible) : nullptr;
+    }
+
     void* NewObject(uint8_t* rtti)
     {
         const uint32_t size = At<uint32_t>(rtti, RTTI::Size);
@@ -675,7 +697,7 @@ namespace
             if (binding && ObjectUUID(binding) == kSlotViewAccept)
                 source = binding;
         }
-        if (!source || !g_visualsVisible)
+        if (!source)
             return nullptr;
 
         void* text = NewObject(g_textRtti);
@@ -700,16 +722,17 @@ namespace
         At<int32_t>(binding, MenuInputEventBinding::Function) = kFunctionInbox;
         At<int32_t>(binding, MenuInputEventBinding::ButtonTrigger) = 0;
         At<void*>(binding, MenuInputEventBinding::Text) = textBinding;
-        At<void*>(binding, MenuInputEventBinding::Visible) = g_visualsVisible;
         return binding;
     }
 
-    void AddRestorePrompt(void* slotPanelTag)
+    void AddRestorePrompt(void* slotPanelTag, void* visible)
     {
         if (!g_restoreBinding)
             g_restoreBinding = MakeRestoreBinding(At<void*>(slotPanelTag, Tag::Resource));
-        if (g_restoreBinding)
-            AddEventHandler(static_cast<uint8_t*>(slotPanelTag) + Tag::EventHandlers, &g_restoreBinding, slotPanelTag);
+        if (!g_restoreBinding)
+            return;
+        At<void*>(g_restoreBinding, MenuInputEventBinding::Visible) = visible;
+        AddEventHandler(static_cast<uint8_t*>(slotPanelTag) + Tag::EventHandlers, &g_restoreBinding, slotPanelTag);
     }
 
     void hk_TagOnEvent(void* tag, void* event)
@@ -723,23 +746,22 @@ namespace
         const GGUUID& id = ObjectUUID(resource);
         if (id == kPagePanel)
         {
-            for (void* binding : At<Array<void*>>(resource, MenuElementResource::EventHandlers))
-            {
-                if (binding && ObjectUUID(binding) == kVisualsBinding)
-                    g_visualsVisible = At<void*>(binding, MenuInputEventBinding::Visible);
-            }
+            WeakPtrUnlink(&g_pagePanel);
+            g_pagePanel = WeakPtr{static_cast<uint8_t*>(tag) + Tag::WeakTarget, nullptr, nullptr, &g_pagePanel};
+            WeakPtrLink(&g_pagePanel);
             // The slot row may have been set up first.
             if (void* pending = g_pendingSlotPanel.target)
             {
                 WeakPtrUnlink(&g_pendingSlotPanel);
-                AddRestorePrompt(static_cast<uint8_t*>(pending) - Tag::WeakTarget);
+                if (void* visible = VisualsVisible())
+                    AddRestorePrompt(static_cast<uint8_t*>(pending) - Tag::WeakTarget, visible);
             }
         }
         else if (id == kSlotViewPanel)
         {
-            if (g_visualsVisible)
+            if (void* visible = VisualsVisible())
             {
-                AddRestorePrompt(tag);
+                AddRestorePrompt(tag, visible);
             }
             else
             {
@@ -753,10 +775,10 @@ namespace
     // "Edit Ammo" pressed: run what "Edit Coils" runs, with ammo mode on.
     bool OpenEditAmmo(void* menu, void* sender, void* event)
     {
-        void* binding = g.editCoilsBinding;
-        if (!binding || ObjectUUID(binding) != kEditCoilsBinding)
+        void* binding = PagePanelBinding(kEditCoilsBinding);
+        if (!binding)
         {
-            LOG("Edit Ammo: Edit Coils binding not seen yet");
+            LOG("Edit Ammo: Edit Coils binding not found");
             return false;
         }
         if (!EnsureSockets())
